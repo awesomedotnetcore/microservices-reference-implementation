@@ -222,10 +222,10 @@ az eventhubs eventhub authorization-rule create --eventhub-name $INGESTION_EH_NA
                                                 --rights Listen
 
 # Get access key
-export EH_ACCESS_KEY_VALUE=$(az eventhubs eventhub authorization-rule keys list --resource-group $RESOURCE_GROUP --namespace-name $INGESTION_EH_NS --name IngestionServiceAccessKey --eventhub-name $INGESTION_EH_NAME --query primaryConnectionString)
+export EH_ACCESS_KEY_VALUE=$(az eventhubs eventhub authorization-rule keys list --resource-group $RESOURCE_GROUP --namespace-name $INGESTION_EH_NS --name IngestionServiceAccessKey --eventhub-name $INGESTION_EH_NAME --query primaryKey)
 
 # Strip quotes
-export EH_ACCESS_KEY_VALUE=("${EH_CONNECTION_STRING[@]//\"/}")
+export EH_ACCESS_KEY_VALUE=("${EH_ACCESS_KEY_VALUE[@]//\"/}")
 ```
 
 Build the Ingestion service
