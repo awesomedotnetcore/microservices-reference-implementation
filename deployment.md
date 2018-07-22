@@ -197,16 +197,36 @@ export INGESTION_EH_NS=[INGESTION_EVENT_HUB_NAMESPACE_HERE]
 export INGESTION_EH_NAME=[INGESTION_EVENT_HUB_NAME_HERE]
 export INGESTION_EH_CONSUMERGROUP_NAME=[INGESTION_EVENT_HUB_CONSUMERGROUP_NAME_HERE]
 
-wget https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/201-event-hubs-create-event-hub-and-consumer-group/azuredeploy.json && \
-sed -i 's#"partitionCount": "4"#"partitionCount": "32"#g' azuredeploy.json && \
-az group deployment create -g $RESOURCE_GROUP --template-file azuredeploy.json  --parameters \
-'{ \
-  "namespaceName": {"value": "'${INGESTION_EH_NS}'"}, \
-  "eventHubName": {"value": "'${INGESTION_EH_NAME}'"}, \
-  "consumerGroupName": {"value": "'${INGESTION_EH_CONSUMERGROUP_NAME}'"} \
-}'
+# Create an Event Hubs namespace
+az eventhubs namespace create --name $INGESTION_EH_NS \
+                              --resource-group $RESOURCE_GROUP \ 
+                              -l $LOCATION
+
+# Create an event hub
+az eventhubs eventhub create --name $INGESTION_EH_NAME \
+                             --resource-group $RESOURCE_GROUP \
+                             --namespace-name $INGESTION_EH_NS \
+                             --partition-count 8
+
+# Create consumer group
+az eventhubs eventhub consumer-group create --eventhub-name $INGESTION_EH_NAME \
+                                            --name $INGESTION_EH_CONSUMERGROUP_NAME \
+                                            --namespace-name $INGESTION_EH_NS \
+                                            --resource-group $RESOURCE_GROUP
+
+# Create authorization rule
+az eventhubs eventhub authorization-rule create --eventhub-name $INGESTION_EH_NAME \
+                                                --name IngestionServiceAccessKey \
+                                                --namespace-name $INGESTION_EH_NS \
+                                                --resource-group $RESOURCE_GROUP \
+                                                --rights Listen
+
+# Get access key
+export EH_ACCESS_KEY_VALUE=$(az eventhubs eventhub authorization-rule keys list --resource-group $RESOURCE_GROUP --namespace-name $INGESTION_EH_NS --name IngestionServiceAccessKey --eventhub-name $INGESTION_EH_NAME --query primaryConnectionString)
+
+# Strip quotes
+export EH_ACCESS_KEY_VALUE=("${EH_CONNECTION_STRING[@]//\"/}")
 ```
-Note: you could also create this from [the Azure Portal](https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-create)
 
 Build the Ingestion service
 
@@ -231,14 +251,10 @@ Deploy the Ingestion service
 # Update deployment YAML with image tage
 sed -i "s#image:#image: $ACR_SERVER/ingestion:0.1.0#g" ./microservices-reference-implementation/k8s/ingestion.yaml
 
-# Get the EventHub shared access policy name and key from the Azure Portal
-export EH_ACCESS_KEY_NAME=[YOUR_SHARED_ACCESS_POLICY_NAME_HERE]
-export EH_ACCESS_KEY_VALUE=[YOUR_SHARED_ACCESS_POLICY_VALUE_HERE]
-
 # Create secret
 kubectl -n shipping create secret generic ingestion-secrets --from-literal=eventhub_namespace=${INGESTION_EH_NS} \
 --from-literal=eventhub_name=${INGESTION_EH_NAME} \
---from-literal=eventhub_keyname=${EH_ACCESS_KEY_NAME} \
+--from-literal=eventhub_keyname=IngestionServiceAccessKey \
 --from-literal=eventhub_keyvalue=${EH_ACCESS_KEY_VALUE}
 
 # Deploy service
