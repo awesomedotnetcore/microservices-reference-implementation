@@ -40,13 +40,13 @@ az login
 az group create --name $RESOURCE_GROUP --location $LOCATION
 
 # Create the ACS cluster
-az acs create --orchestrator-type kubernetes --resource-group $RESOURCE_GROUP --name $CLUSTER_NAME --generate-ssh-keys
+az aks create --resource-group $RESOURCE_GROUP --name $CLUSTER_NAME --node-count 8 --generate-ssh-keys --node-vm-size Standard_DS3_v2
 
 # Install kubectl
-sudo az acs kubernetes install-cli
+sudo az aks install-cli
 
 # Get the Kubernetes cluster credentials
-az acs kubernetes get-credentials --resource-group=$RESOURCE_GROUP --name=$CLUSTER_NAME
+az aks get-credentials --resource-group $RESOURCE_GROUP --name $CLUSTER_NAME
 
 # Create the BC namespaces
 kubectl create namespace shipping && \
