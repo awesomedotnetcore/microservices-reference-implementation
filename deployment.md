@@ -69,10 +69,7 @@ az acr create --name $ACR_NAME --resource-group $RESOURCE_GROUP --sku Basic
 az acr login --name $ACR_NAME
 
 # Get the ACR login server name
-export ACR_SERVER=$(az acr show -g $RESOURCE_GROUP -n $ACR_NAME --query "loginServer")
-
-# Strip quotes
-export ACR_SERVER=("${ACR_SERVER[@]//\"/}")
+export ACR_SERVER=$(az acr show -g $RESOURCE_GROUP -n $ACR_NAME --query "loginServer" -o tsv)
 ```
 
 ## Deploy the Delivery service
